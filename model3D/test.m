@@ -1,12 +1,16 @@
-function  test
-name = 'test.obj';
-[V,F]=read_obj(name);
+function  [V,F]=test()
+name = 'test';
+[V,F]=objRead(name);
+
+
 [N] = compute_face_normal(V,F);
-display(V,F);
+%display(V,F);
 N=N';
 p = [N, -sum(N .* V(F(:,1),:), 2)];
-nv = size(V,1); % total vertex number
-np = 0.1*nv; % remained vertex number
+
+
+nv = size(V,1); % total vertex number顶点总数%每行是一个顶点
+np = 0.1*nv; % remained vertex number剩余顶点数
 Q0 = bsxfun(@times, permute(p, [2,3,1]), permute(p, [3,2,1]));
 
 % compute the Q matrices for all the initial vertices.
@@ -37,7 +41,7 @@ cost(:,3) = sum(squeeze(sum(bsxfun(@times,vm,Qbar),1)).*squeeze(vm),1)';
 
 num = nv;
 tic
-for i = 1:nv-np
+for i = 1:nv-np%循环每执行一次删除一个顶点
     if (nv - i) < 0.9*num
         num = nv - i;
         
@@ -67,8 +71,8 @@ for i = 1:nv-np
 
     % updata face
     F(F == e(2)) = e(1);
-    f_remove = sum(diff(sort(F,2),[],2) == 0, 2) > 0;
-    F(f_remove,:) = [];
+    f_remove = sum(diff(sort(F,2),[],2) == 0, 2) > 0;%找出要删除的面
+    F(f_remove,:) = [];%删除这个三角面
 
     % collapse and delete edge and related edge information
     E(E == e(2)) = e(1);
@@ -77,7 +81,7 @@ for i = 1:nv-np
     Qbar(:,:,k) = [];
     v(:,:,k) = [];
 
-    % delete duplicate edge and related edge information
+    % delete duplicate edge and related edge information删除重复的边和相关的边信息
     [E,ia,ic] = unique(sort(E,2), 'rows'); 
     cost = cost(ia,:);
     Qbar = Qbar(:,:,ia);
@@ -99,7 +103,7 @@ for i = 1:nv-np
     cost(pair,2) = sum(squeeze(sum(bsxfun(@times,pair_v2,Qbar(:,:,pair)),1)).*squeeze(pair_v2),1)';
     cost(pair,3) = sum(squeeze(sum(bsxfun(@times,pair_vm,Qbar(:,:,pair)),1)).*squeeze(pair_vm),1)';
     
-end
+end%循环每执行一次删除一个顶点
 
 
 end
