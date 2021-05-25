@@ -1,14 +1,8 @@
 function  test
 name = 'test.obj';
-OBJ=readObj(name);%readObj(test.obj);
-display(OBJ);
-V=OBJ.v;
-F=OBJ.f.v;
-% [ V, F ] = ply_to_tri_mesh('coww.ply');
-% V=V';
-% F=F';
-
+[V,F]=read_obj(name);
 [N] = compute_face_normal(V,F);
+display(V,F);
 N=N';
 p = [N, -sum(N .* V(F(:,1),:), 2)];
 nv = size(V,1); % total vertex number
@@ -84,7 +78,7 @@ for i = 1:nv-np
     v(:,:,k) = [];
 
     % delete duplicate edge and related edge information
-    [E,ia,ic] = unique(sort(E,2), 'rows'); %#ok<NASGU>
+    [E,ia,ic] = unique(sort(E,2), 'rows'); 
     cost = cost(ia,:);
     Qbar = Qbar(:,:,ia);
     v = v(:,:,ia);
