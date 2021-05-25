@@ -1,17 +1,11 @@
-function  [V,F]=test()
-name = 'test';
-[V,F]=objRead(name);
-
-
+function [ simV,simF ] = simplification( V,F,percent )
+%SIMPLIFICATION Summary of this function goes here
+%   Detailed explanation goes here
 [N] = compute_face_normal(V,F);
-
-%display(V,F);
 N=N';
 p = [N, -sum(N .* V(F(:,1),:), 2)];
-
-
-nv = size(V,1); % total vertex number顶点总数%每行是一个顶点
-np = 0.1*nv; % remained vertex number剩余顶点数
+nv = size(V,1); % total vertex number
+np = percent*nv; % remained vertex number
 Q0 = bsxfun(@times, permute(p, [2,3,1]), permute(p, [3,2,1]));
 
 % compute the Q matrices for all the initial vertices.
@@ -42,21 +36,7 @@ cost(:,3) = sum(squeeze(sum(bsxfun(@times,vm,Qbar),1)).*squeeze(vm),1)';
 
 num = nv;
 tic
-for i = 1:nv-np%循环每执行一次删除一个顶点
-    if (nv - i) < 0.9*num
-        num = nv - i;
-        
-        clf
-        trimesh(F, V(:,1), V(:,2), V(:,3),'LineWidth',1,'EdgeColor','k');
-        %drawMesh(V, F, 'facecolor','y', 'edgecolor','k', 'linewidth', 1.2);
-        view([0 90])
-        axis equal
-        axis off
-        camlight
-        lighting gouraud
-        cameramenu
-        drawnow
-    end
+for i = 1:nv-np
     
     [min_cost, vidx] = min(cost,[],2);
     [~, k] = min(min_cost);
@@ -72,8 +52,8 @@ for i = 1:nv-np%循环每执行一次删除一个顶点
 
     % updata face
     F(F == e(2)) = e(1);
-    f_remove = sum(diff(sort(F,2),[],2) == 0, 2) > 0;%找出要删除的面
-    F(f_remove,:) = [];%删除这个三角面
+    f_remove = sum(diff(sort(F,2),[],2) == 0, 2) > 0;
+    F(f_remove,:) = [];
 
     % collapse and delete edge and related edge information
     E(E == e(2)) = e(1);
@@ -82,8 +62,8 @@ for i = 1:nv-np%循环每执行一次删除一个顶点
     Qbar(:,:,k) = [];
     v(:,:,k) = [];
 
-    % delete duplicate edge and related edge information删除重复的边和相关的边信息
-    [E,ia,ic] = unique(sort(E,2), 'rows'); 
+    % delete duplicate edge and related edge information
+    [E,ia,ic] = unique(sort(E,2), 'rows'); %#ok<NASGU>
     cost = cost(ia,:);
     Qbar = Qbar(:,:,ia);
     v = v(:,:,ia);
@@ -104,7 +84,8 @@ for i = 1:nv-np%循环每执行一次删除一个顶点
     cost(pair,2) = sum(squeeze(sum(bsxfun(@times,pair_v2,Qbar(:,:,pair)),1)).*squeeze(pair_v2),1)';
     cost(pair,3) = sum(squeeze(sum(bsxfun(@times,pair_vm,Qbar(:,:,pair)),1)).*squeeze(pair_vm),1)';
     
-end%循环每执行一次删除一个顶点
-
+    %fprintf('%d\n', i);
+end
+[ simV,simF ] = rectifyindex( V,F );
 
 end

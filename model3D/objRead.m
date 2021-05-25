@@ -37,3 +37,5 @@ while 1
   end
 end
 fclose(fid);
+vertex=vertex';
+faces=faces';
