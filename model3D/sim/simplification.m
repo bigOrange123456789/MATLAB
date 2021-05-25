@@ -1,3 +1,4 @@
+%https://lafengxiaoyu.blog.csdn.net/article/details/72812681?utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromMachineLearnPai2%7Edefault-3.baidujs&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromMachineLearnPai2%7Edefault-3.baidujs
 function [ simV,simF ] = simplification( V,F,percent )
 %SIMPLIFICATION Summary of this function goes here
 %   Detailed explanation goes here
