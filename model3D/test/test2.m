@@ -1,6 +1,5 @@
 function test2()
-[v,f]=objRead("man3");
-
-[ v,f] = simplification( v,f,0.5 );
+[v,f]=objRead("man");
+[ v,f] = simplification2( v,f,0.3 );
 objWrite("result",v,f);
 end
