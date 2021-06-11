@@ -1,7 +1,7 @@
 classdef QEM < handle
     properties
         %mesh
-        Q    %4*4*nv  顶点的矩阵
+        QVex %4*4*nv  顶点的矩阵
         QEdge%4*4*ne  边的矩阵
         cost % ne*3 
         v    %4*3*ne  顶点坐标
@@ -45,7 +45,7 @@ classdef QEM < handle
             end
             
             %1.计算顶点的矩阵Q
-            o.Q=getQ(mesh.F,QFace,nv);%4*4*nv
+            o.QVex=getQ(mesh.F,QFace,nv);%4*4*nv
             function Q=getQ(F,QFace,nv)
                 Q = zeros(4,4,nv);%每个顶点都对应一个4*4的矩阵
                 nf = size(F,1);%三角面个数
@@ -60,7 +60,7 @@ classdef QEM < handle
             %2.计算每个边矩阵
             %E=getE(mesh.F,mesh.V);%获取所有边
             ne = size(mesh.E,1);
-            o.QEdge = getQEdge(o.Q,mesh.E);%使用边矩阵感觉不是很合理，计算出所有的边矩阵
+            o.QEdge = getQEdge(o.QVex,mesh.E);%使用边矩阵感觉不是很合理，计算出所有的边矩阵
             %QEdge:4*4*ne
             function QEdge=getQEdge(Q,E)% compute Q1+Q2 for each pair
                 %QEdge = Q(:,:,E(:,1)) + Q(:,:,E(:,2))
@@ -120,8 +120,8 @@ classdef QEM < handle
             mesh.V(e(2),:) = NaN;%删除另一个顶点
             
             % update Q for v1  %更新代价矩阵，这里的代价之后似乎重新计算了
-            o.Q(:,:,e(1)) = o.Q(:,:,e(1)) + o.Q(:,:,e(2));%e(1)的代价为之前两个点的代价之和
-            o.Q(:,:,e(2)) = NaN;%e(2)的代价为空
+            o.QVex(:,:,e(1)) = o.QVex(:,:,e(1)) + o.QVex(:,:,e(2));%e(1)的代价为之前两个点的代价之和
+            o.QVex(:,:,e(2)) = NaN;%e(2)的代价为空
             
             %更新三角面
             mesh.F(mesh.F == e(2)) = e(1);%e1、e2都是具体数值 %三角面中e2的索引现在都指向e1
@@ -147,7 +147,7 @@ classdef QEM < handle
             
             
             % updata edge information
-            o.QEdge(:,:,pair) = o.Q(:,:,mesh.E(pair,1)) + o.Q(:,:,mesh.E(pair,2));
+            o.QEdge(:,:,pair) = o.QVex(:,:,mesh.E(pair,1)) + o.QVex(:,:,mesh.E(pair,2));
             %QEdge:4*4*ne  pair:n*1
             
             
@@ -167,39 +167,6 @@ classdef QEM < handle
         end%deleteEdge
     end% methods
     methods(Static)
-        function costi=get_costi_new(vi,QEdge)
-            %输入  vi:4*1*ne    QEdge:4*4*ne
-            %输出  costi：ne*1
-            %统一使用边矩阵？，感觉不是很合理
-            bsx=bsxfun(@times,QEdge,vi); %{QEdge:4*4*ne   vi:4*1*ne } -> 4*4*ne
-            
-            s=sum(bsx,1);               % 4*4*ne -> 1*4*ne
-            s=permute(s, [2,1,3]);%!!!!!!!!!!!!!!!!!解决了BUG
-            costi=sum(squeeze(s).*squeeze(vi),1)';
-            %           s:1*4*ne  vi:4*1*ne
-            % ne*1 = {  1*4*ne ,  4*1*ne  }'
-            %squeeze删除了长度为 1 的维度
-            
-            %坐标z>=0的点删除代价加大
-            
-            for i=1:size(vi,3) %  vi:4*1*ne
-                %display(size(NV));%9810
-                %{
-                if NV(i,3)>0 %这个顶点的面法线指向前方
-                    costi(i)=costi(i)+100;
-                end
-                %}
-                if vi(3,1,i)>=0  %z>=-1
-                    costi(i)=costi(i)*100000;%最前面
-                elseif vi(3,1,i)>=-1  %z>=0
-                    costi(i)=costi(i)*1000;%中间
-                end
-                
-            end
-            
-            
-            
-        end
         function costi=get_costi(vi,QEdge)
             %输入  vi:4*1*ne    QEdge:4*4*ne
             %输出  costi：ne*1
