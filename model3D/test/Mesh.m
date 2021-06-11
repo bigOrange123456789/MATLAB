@@ -198,7 +198,7 @@ classdef Mesh < handle
         function test()
             mesh=Mesh("test");
             myQEM=QEM();
-            mesh=myQEM.simplification(mesh,0.5);
+            mesh=myQEM.simplification(mesh,0.3);
             mesh.download();
         end
     end%methods(Static)
