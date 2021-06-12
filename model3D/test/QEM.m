@@ -18,9 +18,10 @@ classdef QEM < handle
                 
                 [~, k] = min(min_cost);%获取代价最小的边序号
                 mesh=o.deleteEdge(k,mesh, vidx);
+                
             end
-            
             mesh.rectifyindex();
+            
         end%simplification
         function pretreatment(o,mesh)
             N=mesh.NF;
@@ -60,7 +61,7 @@ classdef QEM < handle
             %2.计算每个边矩阵
             %E=getE(mesh.F,mesh.V);%获取所有边
             ne = size(mesh.E,1);
-            o.QEdge = getQEdge(o.QVex,mesh.E);%使用边矩阵感觉不是很合理，计算出所有的边矩阵
+            o.QEdge = getQEdge(o.QVex,mesh.E);%边矩阵的合理性在于两个端点折叠后的位置相同，计算出所有的边矩阵
             %QEdge:4*4*ne
             function QEdge=getQEdge(Q,E)% compute Q1+Q2 for each pair
                 %QEdge = Q(:,:,E(:,1)) + Q(:,:,E(:,2))
@@ -110,7 +111,7 @@ classdef QEM < handle
                 
             end
             
-        end%init
+        end%pretreatment
         function mesh=deleteEdge(o,k,mesh, vidx)
             %k是待删除的边的序号
             e = mesh.E(k,:);%获取边对应的两个顶点
@@ -168,16 +169,7 @@ classdef QEM < handle
     end% methods
     methods(Static)
         function costi=get_costi(vi,QEdge)
-            %输入  vi:4*1*ne    QEdge:4*4*ne
-            %输出  costi：ne*1
-            %统一使用边矩阵？，感觉不是很合理
-            bsx=bsxfun(@times,QEdge,vi); %{QEdge:4*4*ne   vi:4*1*ne } -> 4*4*ne
-            
-            s=sum(bsx,1);               % 4*4*ne -> 1*4*ne
-            s=permute(s, [2,1,3]);%!!!!!!!!!!!!!!!!!解决了BUG
-            costi=sum(squeeze(s).*squeeze(vi),1)';
-            %           s:1*4*ne  vi:4*1*ne
-            % ne*1 = {  1*4*ne ,  4*1*ne  }'
+            costi=QEM.get_costi1(vi,QEdge);
         end
         function costi=get_costi1(vi,QEdge)
             %输入  vi:4*1*ne    QEdge:4*4*ne
@@ -194,7 +186,7 @@ classdef QEM < handle
             
             for i=1:size(vi,3) %  vi:4*1*ne
                 if vi(3,1,i)>=0  %z>=-1
-                    costi(i)=costi(i)*100000;%最前面
+                    costi(i)=costi(i)*10000000;%最前面
                 elseif vi(3,1,i)>=-1  %z>=0
                     costi(i)=costi(i)*1000;%中间
                 end
