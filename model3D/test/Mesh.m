@@ -23,8 +23,19 @@ classdef Mesh < handle
         function n=nf(o)
             n=size(o.F,1);
         end
-        function box=box(o)
-            box=[min(o.V);max(o.V)];
+        function out=box(o,type)
+            box0=[min(o.V);max(o.V)];
+            if nargin==1
+                out=box0;
+            else
+                if type=="max"
+                    out=box0(1,:);
+                elseif type=="min"
+                    out=box0(2,:);
+                else%size
+                    out=box0(2,:)-box0(1,:);
+                end
+            end
         end
         function o = Mesh(file_name)
             o.file_name=file_name;
@@ -164,7 +175,17 @@ classdef Mesh < handle
             o.V=recV;
             o.F=recF;
         end
-        function applyMatrix4(o,mat)
+        function applyMove(o,d)
+            o.applyMatrix([1 0 0 d(1);0 1 0 d(2);0 0 1 d(3);0 0 0 1]);
+        end
+        function applyScale(o,s)
+            o.applyMatrix([s(1) 0 0;0 s(2) 0;0 0 s(3)]);
+        end
+        function applyMatrix(o,mat)
+            if length(mat)==3
+                mat=[mat;[0 0 0]];
+                mat=[mat';[0 0 0 1]]';
+            end
             V2=[o.V';ones(o.nv,1)']';%nv*4
             o.V=(o.m34*mat*(V2'))';
         end
@@ -175,8 +196,8 @@ classdef Mesh < handle
             if step==0
                 step=1;
             end
-            box_size_step=ceil(box_size./step);
-            voxel=zeros(box_size_step);
+            %box_size_step=ceil(box_size./step);
+            voxel=[];%zeros(box_size_step);
             for i=1:o.nf()
                 oF=o.F();
                 v1=o.V(oF(i,1),:);
@@ -205,9 +226,20 @@ classdef Mesh < handle
                 if v(3)==0
                     v(3)=1;
                 end
-                
-                voxel(v(1),v(2),v(3))=1;
+                voxel=[voxel;[v(1),v(2),v(3)]];
+                %voxel(v(1),v(2),v(3))=1;
             end
+        end
+        function normal(o)
+            voxel=o.voxelization();
+            mean0 = mean(voxel);% 样本均值
+            Z = voxel-repmat(mean0,length(voxel), 1);%减去均值
+            covMat = Z' * Z;% covMat 协方差矩阵 %r*3 3*r
+            [mat,~] = eigs(covMat, 3);% V每一列为一个特征向量
+            o.applyMatrix(mat');%对齐坐标轴
+            o.applyScale((sum(Z.^3)>0)*2-1);%取x^3大于0的方向为正方向
+            o.applyMove(mean(o.box()).*-1);%包围盒中心到原点
+            o.applyScale(ones(1,3)./o.box("size"));%包围盒单位化
         end
     end%methods
     methods(Static)
@@ -254,18 +286,18 @@ classdef Mesh < handle
             mesh.download();
         end
         function test2()
-            mesh=Mesh("test");
+            mesh=Mesh("mesh");
             mesh.box();
-            mesh.applyMatrix4([
-                1 0 0 0;
-                0 0 1 0;
-                0 1 0 0;
-                0 0 0 1
+            mesh.applyMatrix([
+                1 0 0 ;
+                0 0 1 ;
+                0 1 0 
                 ]);
             voxel=mesh.voxelization();
-            size(voxel)
-            sum(voxel,"all")
-            %mesh.download();
+            size(voxel);
+            %sum(voxel,"all")
+            mesh.normal();
+            mesh.download();
         end
     end%methods(Static)
 end%class
