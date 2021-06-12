@@ -245,6 +245,16 @@ classdef Mesh < handle
             o.applyMove(mean(o.box()).*-1);%包围盒中心到原点
             o.applyScale(ones(1,3)./o.box("size"));%包围盒单位化
         end
+        function draw(o)
+            clf
+            trimesh(o.F, o.V(:,1), o.V(:,2), o.V(:,3),'LineWidth',1,'EdgeColor','k');
+            axis equal
+            axis off %隐藏坐标轴
+            camlight
+            lighting gouraud
+            cameratoolbar%创建一个工具栏
+            drawnow
+        end
     end%methods
     methods(Static)
         function [vertex,faces] = read(filename)
@@ -315,7 +325,8 @@ classdef Mesh < handle
             size(voxel);
             %sum(voxel,"all")
             mesh.normal();
-            mesh.download();
+            mesh.draw();
+            %mesh.download();
         end
         function test3()
             %untitled
