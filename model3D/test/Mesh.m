@@ -9,6 +9,7 @@ classdef Mesh < handle
         NV%顶点法线
         NF%平面法线
         file_name%文件名称
+        matrix0%操作过程中进行的变换
     end
     properties (Constant,Hidden)
       m34=[1 0 0 0;0 1 0 0;0 0 1 0]
@@ -39,6 +40,7 @@ classdef Mesh < handle
         end
         function o = Mesh(file_name)
             o.file_name=file_name;
+            o.matrix0=eye(4);
             [o.V,o.F] = o.read(file_name);
             %o.mergeVertex();
             o.computeNormal();%计算所有平面的法线
@@ -49,8 +51,9 @@ classdef Mesh < handle
             this=myQEM.simplification(this,0.5);
             this.download();
         end
-        function download(this)
-            this.write(this.file_name+"_save",this.V,this.F);
+        function download(o)
+            %inv(o.matrix0);
+            o.write(o.file_name+"_save",o.V,o.F);
         end
         function computeNormal(o)
             %输入： vertex：nv*3   face:nf*3
@@ -188,6 +191,7 @@ classdef Mesh < handle
             end
             V2=[o.V';ones(o.nv,1)']';%nv*4
             o.V=(o.m34*mat*(V2'))';
+            o.matrix0=mat*o.matrix0;%记录进行的变换
         end
         function voxel=voxelization(o)
             box=o.box();
@@ -247,17 +251,31 @@ classdef Mesh < handle
             vertex = [];
             faces = [];
             fid = fopen(filename+".obj");%fid是一个大于0的整数
-            while 1
-                s = fgetl(fid);
-                if ~ischar(s) %如果不是字符串，退出，空字符串也是字符串
-                    break;
-                elseif ~isempty(s)
+            s = fgetl(fid);
+            while ischar(s)
+                if ~isempty(s)
                     if strcmp(s(1), 'f')%如果字符串第一个字符为f %face
-                        faces(end+1,:) = sscanf(s(3:end), '%d %d %d');
+                        %  F V1 V2 V3 ...
+                        %  F V1/VT1/VN1  ...
+                        %  F V1//VN1  ...
+                        str2=strsplit(s," ");
+                        coordinate1=strsplit(cell2mat(str2(2)),"/");
+                        if isempty(length(coordinate1)==1)
+                            faces(end+1,:) =sscanf(s(3:end), '%d %d %d');
+                        else
+                            coordinate2=strsplit(cell2mat(str2(3)),"/");%length(str2num("1 "))
+                            coordinate3=strsplit(cell2mat(str2(4)),"/");
+                            faces(end+1,:) = [
+                                str2double(coordinate1(1))
+                                str2double(coordinate2(1))
+                                str2double(coordinate3(1))
+                                ];
+                        end
                     elseif strcmp(s(1), 'v')%如果字符串第一个字符为v %vertex
                         vertex(end+1,:) = sscanf(s(3:end), '%f %f %f');
                     end%vertex添加一行、在最后一列  s从第三个字符开始到最后一个
                 end
+                s = fgetl(fid);%获取下一行
             end
             fclose(fid);
         end
@@ -286,7 +304,7 @@ classdef Mesh < handle
             mesh.download();
         end
         function test2()
-            mesh=Mesh("mesh");
+            mesh=Mesh("mesh2");
             mesh.box();
             mesh.applyMatrix([
                 1 0 0 ;
@@ -298,6 +316,10 @@ classdef Mesh < handle
             %sum(voxel,"all")
             mesh.normal();
             mesh.download();
+        end
+        function test3()
+            %untitled
+            Mesh.read("untitled");
         end
     end%methods(Static)
 end%class
