@@ -1,6 +1,7 @@
 classdef Mesh < handle
     %MESH  :  3D网格对象
     %继承handel后可以在对象内部修改对象的属性
+    
     properties
         V%点  nv*3
         E%线  ne*3
@@ -10,7 +11,7 @@ classdef Mesh < handle
         file_name%文件名称
         matrix0%操作过程中进行的变换
         
-        print%控制 网格更新后是否以绘制出来
+        print
     end
     properties (Constant,Hidden)
       m34=[1 0 0 0;0 1 0 0;0 0 1 0]
@@ -49,102 +50,14 @@ classdef Mesh < handle
             o.computeEdge();
             o.print=0;%不展示每次网格更新的结果
         end
-        function download(o)
-            %inv(o.matrix0);
-            o.write(o.file_name+"_save",o.V,o.F);
-        end
-        
-        function applyMove(o,in1,in2,in3)
-            if nargin==2
-                d=in1;
-            else
-                d=[in1,in2,in3];
-            end
-            o.applyMatrix([1 0 0 d(1);0 1 0 d(2);0 0 1 d(3);0 0 0 1]);
-        end
-        function applyRotation(o,in1,in2,in3)
-            if nargin==2
-                in=in1;
-            else
-                in=[in1,in2,in3];
-            end
-            o.applyMatrix(rotx(in(1))*roty(in(2))*rotz(in(3)));
-        end
-        function applyScale(o,in1,in2,in3)
-            if nargin==2
-                s=in1;
-            else
-                s=[in1,in2,in3];
-            end
-            o.applyMatrix([s(1) 0 0;0 s(2) 0;0 0 s(3)]);
-        end
-        function applyMatrix(o,mat)
-            if length(mat)==3
-                mat=[mat;[0 0 0]];
-                mat=[mat';[0 0 0 1]]';
-            end
-            V2=[o.V';ones(o.nv,1)']';%nv*4
-            o.V=(o.m34*mat*(V2'))';
-            o.matrix0=mat*o.matrix0;%记录进行的变换
-            if o.print==1
-                o.draw();
-            end
-        end
-        function normal(o)
-            %旋转
-            voxel=o.voxelization();
-            mean0 = mean(voxel);% 样本均值
-            Z = voxel-repmat(mean0,length(voxel), 1);%减去均值
-            covMat = Z' * Z;% covMat 协方差矩阵 %r*3 3*r
-            [mat,~] = eigs(covMat, 3);% V每一列为一个特征向量
-            o.applyMatrix(mat');%对齐坐标轴
-            
-            %翻转
-            voxel=o.voxelization();
-            mean0 = mean(voxel);% 样本均值
-            Z = voxel-repmat(mean0,length(voxel), 1);%减去均值
-            o.applyScale((sum(Z.^3)>0)*2-1);%取x^3大于0的方向为正方向
-            
-            %移动
-            voxel=o.voxelization();
-            mean0 = mean(voxel);% 样本均值
-            o.applyMove(mean0.*-1);
-            
-            
-            %放缩
-            %voxel=o.voxelization();
-            %d=sum((voxel-mean(voxel)).^2);
-            %d=sum(voxel.^2);
-            %o.applyScale(ones(1,3)./(d.^0.5));%除以标准差
-            
-        end
-        function reset(o)
-            o.applyMatrix(inv(o.matrix0));
-        end
-        function draw(o)
-            clf
-            trimesh(o.F, o.V(:,1), o.V(:,2), o.V(:,3),'LineWidth',1,'EdgeColor','k');
-            axis equal
-            %axis off %隐藏坐标轴
-            camlight
-            lighting gouraud
-            cameratoolbar%创建一个工具栏
-            drawnow
-            o.print=1;%展示每次网格更新的结果
-        end
-        function simplify(o,r)
-            myQEM=QEM();
-            o=myQEM.simplification(o,r);
-            if o.print==1
-                o.draw();
-            end
-        end
-    end%methods
-    methods(Hidden)
         function process(this)
             myQEM=QEM();
             this=myQEM.simplification(this,0.5);
             this.download();
+        end
+        function download(o)
+            %inv(o.matrix0);
+            o.write(o.file_name+"_save",o.V,o.F);
         end
         function computeNormal(o)
             %输入： vertex：nv*3   face:nf*3
@@ -269,6 +182,7 @@ classdef Mesh < handle
             o.V=recV;
             o.F=recF;
         end
+        
         function voxel=voxelization(o)
             box=o.box();
             box_size=box(2,:)-box(1,:);
@@ -311,8 +225,101 @@ classdef Mesh < handle
                 %voxel(v(1),v(2),v(3))=1;
             end
         end
+        function applyMove(o,in1,in2,in3)
+            in=in31(in1,in2,in3)
+            o.applyMatrix([1 0 0 in(1);0 1 0 in(2);0 0 1 (3);0 0 0 1]);
+        end
+        function applyRotation(o,in1,in2,in3)
+            if nargin==2
+                in=in1;
+            else
+                in=[in1,in2,in3];
+            end
+            o.applyMatrix(rotx(in(1))*roty(in(2))*rotz(in(3)));
+        end
+        function applyScale(o,in1,in2,in3)
+            if nargin==2
+                s=in1;
+            else
+                s=[in1,in2,in3];
+            end
+            o.applyMatrix([s(1) 0 0;0 s(2) 0;0 0 s(3)]);
+        end
+        function applyMatrix(o,mat)
+            if length(mat)==3
+                mat=[mat;[0 0 0]];
+                mat=[mat';[0 0 0 1]]';
+            end
+            V2=[o.V';ones(o.nv,1)']';%nv*4
+            o.V=(o.m34*mat*(V2'))';
+            o.matrix0=mat*o.matrix0;%记录进行的变换
+            if o.print==1
+                o.draw();
+            end
+        end
+        function normal(o)
+            %旋转
+            voxel=o.voxelization();
+            mean0 = mean(voxel);% 样本均值
+            Z = voxel-repmat(mean0,length(voxel), 1);%减去均值
+            covMat = Z' * Z;% covMat 协方差矩阵 %r*3 3*r
+            [mat,~] = eigs(covMat, 3);% V每一列为一个特征向量
+            o.applyMatrix(mat');%对齐坐标轴
+            
+            %翻转
+            voxel=o.voxelization();
+            mean0 = mean(voxel);% 样本均值
+            Z = voxel-repmat(mean0,length(voxel), 1);%减去均值
+            o.applyScale((sum(Z.^3)>0)*2-1);%取x^3大于0的方向为正方向
+            
+            %移动
+            voxel=o.voxelization();
+            mean0 = mean(voxel);% 样本均值
+            o.applyMove(mean0.*-1);
+            
+            
+            %放缩
+            %voxel=o.voxelization();
+            %d=sum((voxel-mean(voxel)).^2);
+            %d=sum(voxel.^2);
+            %o.applyScale(ones(1,3)./(d.^0.5));%除以标准差
+            
+        end
+        function reset(o)
+            o.applyMatrix(inv(o.matrix0));
+        end
+        function draw(o)
+            clf
+            trimesh(o.F, o.V(:,1), o.V(:,2), o.V(:,3),'LineWidth',1,'EdgeColor','k');
+            axis equal
+            %axis off %隐藏坐标轴
+            camlight
+            lighting gouraud
+            cameratoolbar%创建一个工具栏
+            drawnow
+            o.print=1;%展示每次网格更新的结果
+        end
+        function simplify(o,r)
+            myQEM=QEM();
+            o=myQEM.simplification(o,r);
+            if o.print==1
+                o.draw();
+            end
+        end
+    end%methods
+    methods(Hidden)
+        function print001(o)
+            display(o);
+        end
     end%methods(Hidden)
     methods(Static)
+        function in=in31(in1,in2,in3)
+             if nargin==2
+                in=in1;
+            else
+                in=[in1,in2,in3];
+             end
+        end
         function [vertex,faces] = read(filename)
             vertex = [];
             faces = [];
@@ -362,7 +369,7 @@ classdef Mesh < handle
             end
         end
     end%methods(Static)
-    methods(Static,Hidden)%用于测试的方法
+    methods(Static)%用于测试的方法
         function test()
             mesh=Mesh("man_sim2");
             myQEM=QEM();

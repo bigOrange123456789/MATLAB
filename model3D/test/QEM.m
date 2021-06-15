@@ -169,7 +169,7 @@ classdef QEM < handle
     end% methods
     methods(Static)
         function costi=get_costi(vi,QEdge)
-            costi=QEM.get_costi1(vi,QEdge);
+            costi=QEM.get_costi0(vi,QEdge);
         end
         function costi=get_costi1(vi,QEdge)
             %ÊäÈë  vi:4*1*ne    QEdge:4*4*ne
