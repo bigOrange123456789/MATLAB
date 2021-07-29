@@ -11,10 +11,11 @@ classdef Mesh < handle
         matrix0%操作过程中进行的变换
         
         print%控制 网格更新后是否以绘制出来
+        voxel_size%体素方块大小
     end
-    properties (Constant,Hidden)
+    properties(Constant,Hidden)
       m34=[1 0 0 0;0 1 0 0;0 0 1 0]
-      voxel_size=0.1;%体素方块大小
+      
     end
     methods
         function n=nv(o)
@@ -48,10 +49,25 @@ classdef Mesh < handle
             o.computeNormal();%计算所有平面的法线
             o.computeEdge();
             o.print=0;%不展示每次网格更新的结果
+            o.voxel_size=min(o.box("size"))/10;
         end
         function download(o)
             %inv(o.matrix0);
             o.write(o.file_name+"_save",o.V,o.F);
+        end
+        function reset(o)
+            o.applyMatrix(inv(o.matrix0));
+        end
+        function draw(o)
+            clf
+            trimesh(o.F, o.V(:,1), o.V(:,2), o.V(:,3),'LineWidth',1,'EdgeColor','k');
+            axis equal
+            %axis off %隐藏坐标轴
+            camlight
+            lighting gouraud
+            cameratoolbar%创建一个工具栏
+            drawnow
+            o.print=1;%展示每次网格更新的结果
         end
         
         function applyMove(o,in1,in2,in3)
@@ -101,6 +117,7 @@ classdef Mesh < handle
             
             %翻转
             voxel=o.voxelization();
+            size(voxel)
             mean0 = mean(voxel);% 样本均值
             Z = voxel-repmat(mean0,length(voxel), 1);%减去均值
             o.applyScale((sum(Z.^3)>0)*2-1);%取x^3大于0的方向为正方向
@@ -108,7 +125,8 @@ classdef Mesh < handle
             %移动
             voxel=o.voxelization();
             mean0 = mean(voxel);% 样本均值
-            o.applyMove(mean0.*-1);
+            mean0
+            %o.applyMove(mean0.*-1);
             
             
             %放缩
@@ -118,19 +136,8 @@ classdef Mesh < handle
             %o.applyScale(ones(1,3)./(d.^0.5));%除以标准差
             
         end
-        function reset(o)
-            o.applyMatrix(inv(o.matrix0));
-        end
-        function draw(o)
-            clf
-            trimesh(o.F, o.V(:,1), o.V(:,2), o.V(:,3),'LineWidth',1,'EdgeColor','k');
-            axis equal
-            %axis off %隐藏坐标轴
-            camlight
-            lighting gouraud
-            cameratoolbar%创建一个工具栏
-            drawnow
-            o.print=1;%展示每次网格更新的结果
+        function vector=feature(o)
+            vector=SH.getFeature(o);
         end
         function simplify(o,r)
             myQEM=QEM();
@@ -269,7 +276,63 @@ classdef Mesh < handle
             o.V=recV;
             o.F=recF;
         end
-        function voxel=voxelization(o)
+        function voxel2=voxelization(o)
+            box=o.box();
+            box_size=box(2,:)-box(1,:);
+            step=min(box_size)*o.voxel_size;%体素方块大小
+            if step==0
+                step=1;
+            end
+            %box_size_step=ceil(box_size./step);
+            voxel=zeros(ceil(box_size/step));%zeros(box_size_step);
+            for i=1:o.nf()
+                oF=o.F();
+                v1=o.V(oF(i,1),:);
+                v2=o.V(oF(i,2),:);
+                v3=o.V(oF(i,3),:);
+                voxel=addF(v1,v2,v3,voxel,box,step);
+            end
+            voxelSize=size(voxel);
+            voxel2=zeros(sum(voxel,"all"),3);
+            index=1;
+            for i1=1:voxelSize(1)
+                for i2=1:voxelSize(2)
+                    for i3=1:voxelSize(3)
+                        if voxel(i1,i2,i3)==1
+                            voxel2(index,:)=[i1,i2,i3];
+                            index=index+1;
+                        end
+                    end
+                end
+            end
+            voxel2=voxel2.*o.voxel_size;%+repmat(box(1,:),length(voxel),1);%体素方块大小
+            function voxel=addF(v1,v2,v3,voxel,box,step)
+                for A=0:0.2:1
+                    for B=0:0.2:(1-A)
+                        v=v1.*A+v2.*B+v3.*(1-A-B);
+                        voxel=addV(v,voxel,box,step);
+                    end
+                end
+            end
+            function voxel=addV(v,voxel,box,step)
+                v
+                v=v-box(1,:);
+                v=round(v./step);
+                %v=v+ones(size(v));
+                if v(1)==0
+                    v(1)=1;
+                end
+                if v(2)==0
+                    v(2)=1;
+                end
+                if v(3)==0
+                    v(3)=1;
+                end
+                voxel(v(1),v(2),v(3))=1;
+                %voxel(v(1),v(2),v(3))=1;
+            end
+        end
+        function voxel=voxelization0(o)
             box=o.box();
             box_size=box(2,:)-box(1,:);
             step=min(box_size)*o.voxel_size;%体素方块大小
@@ -311,8 +374,32 @@ classdef Mesh < handle
                 %voxel(v(1),v(2),v(3))=1;
             end
         end
+        function drawVoxel(o)
+            voxel=o.voxelization();
+            size(voxel)
+            for i=1:length(voxel)
+                o.drawCube(voxel(i,:),o.voxel_size);
+            end
+            %shpCubeWithSphericalCavity = alphaShape(voxel(:,1),voxel(:,2),voxel(:,3));
+            %figure;
+            %plot(shpCubeWithSphericalCavity,'FaceAlpha',0.5);
+        end
     end%methods(Hidden)
     methods(Static)
+        function mat=getAffineMatrix(url1,url2)
+            m1=Mesh(url1);
+            m2=Mesh(url2);
+            m1.normal();
+            m2.normal();
+            mat=(eye(4)/m2.matrix0)*m1.matrix0;
+        end
+        function l=distance(v1,v2)
+            l1=sum(v1.^2).^0.5;
+            l2=sum(v2.^2).^0.5;
+            v1=v1/l1;
+            v2=v2/l2;
+            l=sum((v1-v2).^2)^0.5;
+        end
         function [vertex,faces] = read(filename)
             vertex = [];
             faces = [];
@@ -361,12 +448,38 @@ classdef Mesh < handle
                 end
             end
         end
+        function drawCube(in,size)
+            x=in(1);y=in(2);z=in(3);
+            a = size;b = size;c = size;
+            % 8个顶点分别为：
+            % 与(0,0,0)相邻的4个顶点
+            % 与(a,b,c)相邻的4个顶点
+            V = [
+                0 0 0;
+                a 0 0;
+                0 b 0;
+                0 0 c;
+                a b c;
+                0 b c;
+                a 0 c;
+                a b 0];
+            V(:,1)=V(:,1)-a/2+x;
+            V(:,2)=V(:,2)-b/2+y;
+            V(:,3)=V(:,3)-c/2+z;
+            % 6个面
+            % 以(0,0,0)为顶点的三个面
+            % 以(a,b,c)为顶点的三个面
+            F = [1 2 7 4;1 3 6 4;1 2 8 3;
+                5 8 3 6;5 7 2 8;5 6 4 7];
+            hold on
+            patch('Faces',F,'Vertices',V,'FaceColor','none','LineWidth',1.5);
+        end
     end%methods(Static)
     methods(Static,Hidden)%用于测试的方法
         function test()
             mesh=Mesh("man_sim2");
             myQEM=QEM();
-            mesh=myQEM.simplification(mesh,0.5);
+            mesh=myQEM.simplification(mesh,0.1);
             mesh.download();
         end
         function test2()

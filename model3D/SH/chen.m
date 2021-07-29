@@ -19,7 +19,7 @@ lb=[];ub=[];
 %系数 x
 % x 处的残差的 2-范数平方值：sum((fun(x,xdata)-ydata).^2)。
 %描述退出条件的值 exitflag
-cc%-cc_
+%cc-cc_
 size(cc)
      
      

@@ -1,3 +1,23 @@
-function test( x )
-
-end;
+function test( )
+            arr={};
+            fid = fopen("test.ifc");%fid是一个大于0的整数
+            s = fgetl(fid);
+            while ischar(s)
+                if ~isempty(s)
+                    a=strsplit(s,"IFC");
+                    s=cell2mat(a(2));
+                    a=strsplit(s,"(");
+                    disp(a(1))
+                    s=A2a( a(1) );
+                    arr(end+1,1)=s;
+                end
+                s = fgetl(fid);%获取下一行
+            end
+            fclose(fid);
+            writecell(arr,'arr.xlsx','Sheet',1,'Range','A1');
+            l=length(arr);
+            analysis=-1ones(l,1);
+            for i=2:l,
+                for j=1:i,
+                    if
+end
