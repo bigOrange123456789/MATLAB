@@ -2,6 +2,7 @@ classdef Mesh < handle
     %MESH  :  3D网格对象
     %继承handel后可以在对象内部修改对象的属性
     properties
+        flag0%测试
         V%点  nv*3
         E%线  ne*3
         F%面  nf*3
@@ -15,7 +16,6 @@ classdef Mesh < handle
     end
     properties(Constant,Hidden)
       m34=[1 0 0 0;0 1 0 0;0 0 1 0]
-      
     end
     methods
         function n=nv(o)
@@ -42,6 +42,25 @@ classdef Mesh < handle
             end
         end
         function o = Mesh(file_name)
+            o.file_name=file_name;
+            o.matrix0=eye(4);
+            [o.V,o.F] = o.read(file_name);
+            %o.mergeVertex();
+            o.computeNormal();%计算所有平面的法线
+            o.computeEdge();
+            o.print=0;%不展示每次网格更新的结果
+            o.voxel_size=min(o.box("size"))/10;
+            %开始记录符合要求的点
+            o.flag0=zeros(o.nv(),1);
+            for i=1:o.nv()  %o.V=V0;
+                if o.V(i,1)<-0.4
+                    o.flag0(i,1)=1;
+                end
+            end
+            %完成记录符合要求的点
+            
+        end
+        function o = Mesh0(file_name)
             o.file_name=file_name;
             o.matrix0=eye(4);
             [o.V,o.F] = o.read(file_name);
@@ -94,12 +113,37 @@ classdef Mesh < handle
             end
             o.applyMatrix([s(1) 0 0;0 s(2) 0;0 0 s(3)]);
         end
+        function applyMatrix1(o,mat)
+            if length(mat)==3
+                mat=[mat;[0 0 0]];
+                mat=[mat';[0 0 0 1]]';
+            end
+            V0=o.V; %记录修改前的情况
+            V2=[o.V';ones(o.nv,1)']';%nv*4
+            o.V=(o.m34*mat*(V2'))';
+            %m=Mesh("man");m.draw();
+            %m.applyMove(-0.4,0.44,0)
+            for i=1:o.nv()  %o.V=V0;
+                if o.flag0(i,1)==1
+                    o.V(i,1)=V0(i,1);
+                    o.V(i,2)=V0(i,2);
+                    o.V(i,3)=V0(i,3);
+                end
+            end
+            
+            
+            o.matrix0=mat*o.matrix0;%记录进行的变换
+            if o.print==1
+                o.draw();
+            end
+        end
         function applyMatrix(o,mat)
             if length(mat)==3
                 mat=[mat;[0 0 0]];
                 mat=[mat';[0 0 0 1]]';
             end
             V2=[o.V';ones(o.nv,1)']';%nv*4
+            
             o.V=(o.m34*mat*(V2'))';
             o.matrix0=mat*o.matrix0;%记录进行的变换
             if o.print==1
